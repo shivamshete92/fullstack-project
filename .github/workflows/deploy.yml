@@ -10,9 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout your repo
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      # 2️⃣ SSH deploy to EC2
       - name: Deploy via SSH to EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -24,7 +26,7 @@ jobs:
             set -e
 
             APP_DIR="/home/ubuntu/fullstack-project"
-            
+
             echo "🚀 Starting deployment on EC2..."
 
             # Ensure project folder exists
@@ -41,7 +43,9 @@ jobs:
 
             cd "$APP_DIR"
 
-            # Install Docker if missing
+            # ------------------------------
+            # 1️⃣ Install Docker if missing
+            # ------------------------------
             if ! command -v docker &> /dev/null; then
               sudo apt update
               sudo apt install -y docker.io
@@ -49,18 +53,27 @@ jobs:
               sudo systemctl start docker
             fi
 
-            # Install Docker Compose (v2) if missing
+            # ------------------------------
+            # 2️⃣ Install Docker Compose v2
+            # ------------------------------
             if ! docker compose version &> /dev/null; then
-              DOCKER_COMPOSE_VERSION=2.23.1
-              sudo curl -L "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" \
-                -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
+              sudo mkdir -p /usr/lib/docker/cli-plugins
+              sudo curl -SL https://github.com/docker/compose/releases/download/v2.23.1/docker-compose-linux-x86_64 -o /usr/lib/docker/cli-plugins/docker-compose
+              sudo chmod +x /usr/lib/docker/cli-plugins/docker-compose
             fi
 
-            # Stop any running containers
+            # Verify installation
+            docker --version
+            docker compose version
+
+            # ------------------------------
+            # 3️⃣ Stop any running containers
+            # ------------------------------
             sudo docker compose down || true
 
-            # Build & start frontend and backend
+            # ------------------------------
+            # 4️⃣ Build & start frontend + backend
+            # ------------------------------
             sudo docker compose up -d --build
 
-            echo "✅ Deployment completed! Access your app at http://<EC2_PUBLIC_IP>:<EXPOSED_PORTS>"
+            echo "✅ Deployment completed! Visit your app at http://<EC2_PUBLIC_IP>:<PORTS>"
