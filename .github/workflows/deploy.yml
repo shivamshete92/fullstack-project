@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy Fullstack Project to EC2
 
 on:
   push:
@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy to EC2
+      - name: Deploy via SSH to EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -21,10 +21,27 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            cd ~/fullstack-app || git clone https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git ~/fullstack-app
-            cd ~/fullstack-app
-            git reset --hard
-            git pull origin main
+            set -e
+            APP_DIR="/home/ubuntu/fullstack-project"
 
-            docker compose down
+            echo "🚀 Starting deployment on EC2..."
+
+            # Navigate to project directory or clone it
+            if [ ! -d "$APP_DIR/.git" ]; then
+              git clone https://github.com/shivamshete92/fullstack-project.git "$APP_DIR"
+            else
+              cd "$APP_DIR"
+              git reset --hard HEAD
+              git pull origin main
+            fi
+
+            cd "$APP_DIR"
+
+            # Build and deploy using Docker Compose
+            docker compose down || true
             docker compose up -d --build
+
+            echo "✅ Deployment complete!"
+            echo " - Frontend: http://<EC2_PUBLIC_IP>:3000"
+            echo " - Backend:  http://<EC2_PUBLIC_IP>:5000"
+
